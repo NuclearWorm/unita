@@ -15,37 +15,52 @@ from werkzeug.serving import run_with_reloader
 
 #DEBUG = True
 DEBUG = False
-
+# Initial value of trigger to stop executing tests
 STOP_IT = False
-
+# Directory for temporary files
 TMP_DIR = "/tmp/"
 
+# Regexp for description of test suite in web interface
+# Should be in main file with unittests
+# TODO: add required description to Howto and Readme
 desc_re = re.compile(r'WEBtest_description="([^"]+)"')
 
+# Environments with test files, each env should fit some directory with tests
+# TODO: do it configurable from web interface
 DIRS = [
    'testenv1',
    'testenv2',
    'testenv3',
    'testenv4',
 ]
-VIRT_ENV = '/home/he/virtual_env'
+# Directory of virtualenv where all packages are located
+# TODO: make it optional, not everyone uses virtualenv
+VIRT_ENV = os.path.join(os.environ["HOME"], 'virtual_env')
 
 # { "virt2": [], "virt": [], "test1": [] }
 RUNNING = dict([(env, []) for env in DIRS])
+
 # { "virt2": {}, "virt": {}, "test1": {} }
 SUITE_RESULT = dict([(env, {'running': False, 'finished': False, }) for env in DIRS])
-HOME = os.environ['HOME']
+
+HOME = os.environ['HOME'] # yeah, I'm joking
 # "/home/he/virt2/tplant/qadir"
+# Internal path within the environment
 hashlama = lambda x: os.path.join(HOME, x, "tplant", "qadir")
 ENVS = map(hashlama, DIRS)
+# TODO: make all these paths simpler, simpler, SIMPLERRRR!
+
+# Regexps for finding files with tests, let's search only *.py
 test_regex = re.compile(r"\w+\.py")
 
 app = Flask(__name__)
 
+# Debug log - is log file where any debug info during the test could be saved
 def empty_debuglog():
    with open(os.path.join(os.getcwd(), "debuglog"), "w") as dblog:
       dblog.write("")
 
+# Make jsonifying be better
 def json_fix(x):
    if not x: return []
    new_x = []
@@ -53,9 +68,9 @@ def json_fix(x):
       new_x += (i[0].__repr__(), i[1])
    return new_x
 
+# Let's search files
 def find_tests_in_env(env):
    full_path = hashlama(env)
-   #files = [f for f in os.listdir(full_path) if ".py" in f]
    files = [f for f in os.listdir(full_path) if test_regex.match(f) and "template_test" not in f]
    d_files = []
    for file in files:
@@ -67,6 +82,7 @@ def find_tests_in_env(env):
          d_files.append(d_file)
    return d_files
 
+# Let's load all the cases from the file
 def load_cases(file):
    home_env = "/".join(os.path.dirname(file).split("/")[:-2])
    print "Load cases from", file
@@ -93,6 +109,7 @@ def load_cases(file):
    print "Deactivated sys.path", sys.path
    return ulist
 
+# Run one test
 def run_real_test(env, test):
    file_name = test.split(".")[0]
    home_env = os.path.join(HOME, env)
@@ -136,7 +153,7 @@ def run_real_test(env, test):
    return render_template("try.html", res=res, text = text)
    #return res, text
    
-
+# Run suite of test, sequentially.
 def run_real_test_suite(env, tests):
    #global SUITE_RESULT
    #SUITE_RESULT = dict([(env, {'running': False, 'finished': False, }) for env in DIRS])
@@ -223,9 +240,6 @@ def run_real_test_suite(env, tests):
    sys.path = [i for i in sys.path if home_env not in i]
    
    
-   #return render_template("try.html", res=res, text = text)
-   #return res, text
-   
 ## Routes
 
 
@@ -267,10 +281,7 @@ def get_test_info():
          status = "errored"
       else:
          status = "unknown"
-      #print "HTML: ", html
-      #print "STATUS: ", status
       return jsonify({"status" : status, "html": html})
-      #return render_template("try.html", res=res, text = text)
    except Exception, e:
       print "Excepted get_test_info", str(e)
       return "ERROR!"
@@ -281,11 +292,8 @@ def get_env_test_status():
       print "POST/GET request for all info:"
       env = request.args.get('env','')
       print "getting tests for env", env
-      #print "Running:", RUNNING, RUNNING.__class__
-      #print "Running [env]:", RUNNING[env]
       id_list = [test.id() for test in RUNNING[env]]
       reply = jsonify({env: id_list})
-      #reply=jsonify({env: ["ssg_test.Test.testAlarmHours_ConfigErrors_1", "ssg_test.Test.testAlarmHours_ConfigErrors_2"]})
       print "'" + str(reply) + "'"
       return reply
    except Exception, e:

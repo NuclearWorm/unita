@@ -1,0 +1,44 @@
+{% extends "sidebar.html" %}
+
+{% set current_env = test_env %}
+{% set current_test = test_file %}
+
+
+    {% block path %}
+        <li><a href="/"> Main </a> <span class="divider">/</span></li>
+        <li>{{current_env}}<span class="divider">/</span></li>
+        <li class="active">{{current_test}}<span class="divider">/</span></li>
+    {% endblock %}
+
+{% block contentright %}
+
+   <div class="span8">
+    <ul class="unstyled">
+        {% for case in cases %}
+	<li>
+            
+            <form name="input" action="run_suite" method="get">
+                <label class="checkbox inline">
+                    <input type="checkbox" id="1" value="run_{{test_env}}___{{case.id()}}">
+                </label>
+ 
+                <a id="{{ case.id() }}"></a><span class="lead">{{ case._testMethodName }}<br/><code>{{ case.id() }}</code>
+                </span>
+            </form>  
+               
+            <form name="input" action="/run_test" method="post">
+                <input type="hidden" name="test4run" value="{{case.id()}}">
+                <input type="hidden" name="env" value="{{test_env}}">
+                <button type="submit" class="btn btn-primary">Run</button>
+            </form>
+        
+        </li><br/>
+	
+        {% endfor %}
+    </ul>
+   </div>   
+  
+  
+  
+ <div id="result"></div>
+{% endblock %}

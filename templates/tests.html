@@ -1,0 +1,276 @@
+{% extends "sidebar.html" %}
+
+{% set current_env = test_env %}
+{% set current_test = test_file %}
+
+
+    {% block path %}
+        <li><a href="/"> Main </a> <span class="divider">/</span></li>
+        <li>{{current_env}}<span class="divider">/</span></li>
+        <li class="active">{{current_test}}<span class="divider">/</span></li>
+    {% endblock %}
+
+{% block contentright %}
+
+  
+<script type="text/javascript">
+
+window.RUNNING_SUITE = false;
+var STOP_IT = false;
+
+$(document).ready(function() {
+    
+    var FREQ=5000;
+    var RUNNING=false;
+  
+  $("div[id='clickme']").click(function () {
+           var this_test = this.title
+           var target_submit = "form[id='one_test__" + this.title + "']";
+           
+           $.getJSON('/get_env_test_status?env={{current_env}}', function(data) {
+                    $.each(data, function (index, value) {
+                        if (value.length > 0 || RUNNING || window.RUNNING_SUITE) {alert("Running test here!");}
+                        else {
+                            
+                            var RUNNING=true;
+                            window.RUNNING_SUITE=true;
+                            var test4run = this_test;
+                            var env = "{{current_env}}";
+                            var dataString = 'test4run='+ this_test + '&env=' + env; 
+                            
+                            var status_panel = "span[id='status_" + this_test + "']";
+                            $(status_panel).html('<div class="progress progress-striped active"><div class="bar" style="width: 100%;"></div></div>');
+                            var run_button = "div[title='" + this_test + "']";
+                            $(run_button).toggleClass("disabled");
+                            
+                            $.ajax({  
+                                type: "POST",  
+                                url: "/run_test",  
+                                data: dataString,
+                                dataType: "html",
+                                success: function(data) {  
+                                 $(status_panel).html(data);
+                                 var RUNNING=false;
+                                 window.RUNNING_SUITE=false;
+                                 $(run_button).toggleClass("disabled");
+                                  } 
+                                });  
+                              return false; 
+                            
+                            
+                            }
+                            var RUNNING=false;
+                            window.RUNNING_SUITE=false;
+                        });
+           });
+  });
+
+
+$('.row .btn').on('click', function(e) {
+    e.preventDefault();
+    var $this = $(this);
+    var $collapse = $this.closest('.collapse-group').find('.collapse');
+    $collapse.collapse('toggle');
+});  
+
+
+$("#selectall").change(function(){
+    var status2 = $(this).is(":checked");
+    $(".cb").prop("checked",status2);
+});
+
+$('#stop_all').bind('click', function() {
+    STOP_IT = true;
+     $.ajax({  
+        type: "POST",  
+        url: "/stop_test",  
+        data: "",
+        dataType: "html",
+        success: function(data) {return true;}});
+});
+
+
+
+$('#click_runall1').bind('click', function() {
+    var checked = $('input[type="checkbox"]:checked');
+    if (checked.length == 0) {alert("Nothing is checked!"); return;}
+    
+    console.log("CHECKED: ",checked.length);
+    if (window.RUNNING_SUITE) {
+        alert("Test is running here! Wait for completion.");
+        return false;}
+
+    // Prepare
+    STOP_IT = false;
+    window.RUNNING_SUITE = true;
+    $('#click_runall1').toggleClass("disabled");
+    $('#stop_all').toggleClass("disabled");
+    
+    var tests = $('input[type="checkbox"]:checked');
+    var not_run = new Array();
+    
+    for (k=0; k < tests.length; k++) {
+        //console.log("Test=" + tests[k]);
+        if (tests[k].value.indexOf("Test") >= 0)
+        {not_run.push(tests[k].value);}
+        //console.log("Test=" + tests[k].value);
+    }
+
+    var passed = new Array();
+    var failed = new Array();
+    var errored = new Array();
+    
+    $("#global_status").html("<strong><ul class='inline'><li class='text-success'>PASSED: " +
+    passed.length + "</li>   " + "<li class='text-error'>FAILED: " + failed.length + "</li>   " +
+    "<li class='text-warning'>ERRORS: " + errored.length + "</li></ul></strong>");
+    //console.log("not run: " + not_run + " fail: " + failed + " passed: " + passed);
+    
+    var env = "{{current_env}}";
+    var array = $.map(checked, function(k, v) {
+    if (k.value.indexOf("Test") >= 0)
+    {return [k.value];}
+    });
+    console.log("Sending to POST array: " + array);
+    
+    var dataString = 'test4run='+ array + '&env=' + env;
+    
+        $.ajax({  
+            type: "POST",  
+            url: "/run_test_suite",  
+            data: dataString,
+            dataType: "html",
+            success: function(data) {
+                console.log(data);
+            }
+        });
+            
+    function getenv_status()  {
+        $.getJSON('/get_env_testsuite_status?env={{current_env}}', function(data) {
+        var suite_not_finished = data.running;
+        
+        $.each(data, function (index, value) {
+                        
+            if (index == "running") {
+                return true;
+            }
+            else if (index == "finished") {
+                return true;
+            }
+            
+            var test_status_panel = "span[id='status_" + index + "']";
+            
+            $.each(value, function (key, val) {
+                if (key == "running" && val) {
+                        $(test_status_panel).html('<div class="progress progress-striped active"><div class="bar" style="width: 100%;"></div></div>');
+                        $("#current_test").html('<p class="muted"><em>Running ' + index + '...</em></p>');
+                    }
+                if (key == "finished" && val) {
+                    var $url_get = '/get_test_info?env={{current_env}}&test=' + index;
+                    
+                    function get_updated_status() {
+                        res_data2 = $.getJSON($url_get, function(res_data) {
+                            if (res_data.status == "errored") {
+                                console.log("The resdata status is errored!");
+                                if ($.inArray(index, errored) == -1) {
+                                    errored.push(index);
+                                    var elem_index = not_run.indexOf(index);
+                                    not_run.splice(elem_index, 1);
+                                }
+                            }
+                            else if (res_data.status == "failed") {
+                                if ($.inArray(index, failed) == -1) {
+                                    failed.push(index);
+                                    var elem_index = not_run.indexOf(index);
+                                    not_run.splice(elem_index, 1);
+                                }
+                            }
+                            else if (res_data.status == "passed") {
+                                if ($.inArray(index, passed) == -1) {
+                                    passed.push(index);
+                                    var elem_index = not_run.indexOf(index);
+                                    not_run.splice(elem_index, 1);
+                                }
+                            }
+                            $("#global_status").html("<strong><ul class='inline'><li class='text-success'>PASSED: " +
+                            passed.length + "</li>   " + "<li class='text-error'>FAILED: " + failed.length + "</li>   " +
+                            "<li class='text-warning'>ERRORS: " + errored.length + "</li></ul></strong>");
+                            $(test_status_panel).html(res_data.html);
+                        });}
+                    
+                    get_updated_status();}
+            });
+        });
+        
+        if (suite_not_finished) {
+            setTimeout(getenv_status, 5000);}
+            else {
+                $("#current_test").html('<p class="muted">Finished</p>');
+                $('#click_runall1').toggleClass("disabled");
+                $('#stop_all').toggleClass("disabled");
+                window.RUNNING_SUITE = false;
+            };});}
+    
+    getenv_status();
+
+});
+
+
+
+
+
+
+
+
+
+
+});
+</script>
+
+<!-- /* $(target_submit).submit(); */ -->
+
+   <div class="span8">
+    
+    <ul class="unstyled">
+        
+        <p class="lead"><label class="checkbox inline"><input type='checkbox' id='selectall' class="checkbox inline"></label>
+            <span id="click_runall1" class="btn btn-primary inline" title="run_all">Run All Selected</span>
+            <span id="stop_all" class="btn inline disabled" title="run_all">Stop All</span>
+        </p>
+        
+        <div id="global_status"></div><div id="current_test"></div>
+        <p>&nbsp;</p>
+        {% for case in cases %}
+	<li>
+            
+            <form name="input" id="suite" action="run_suite" method="get">
+                <label class="checkbox inline">
+                    <input type="checkbox" class="cb" name="test" value="{{ case.id() }}">
+                </label>
+            
+                <a id="{{ case.id() }}"></a>
+                {% if case._testMethodDoc %}
+                    <span class="lead">{{ case._testMethodDoc | replace("@brief", "")}}</span><br/>
+                    <span class="small">{{ case._testMethodName }}</span>
+                {% else %}
+                    <span class="lead">{{ case._testMethodName }}</span>
+                {% endif %}
+                <br/><code>{{ case.id() }}</code>
+                
+              </form>
+               
+            <form id="one_test__{{case.id()}}" name="input" action="/run_test" method="post">
+                <input type="hidden" name="test4run" value="{{case.id()}}">
+                <input type="hidden" name="env" value="{{test_env}}">
+                
+                <div id="clickme" class="btn btn-primary" title="{{case.id()}}">Run</div><br/>
+                <!-- <button type="submit" class="btn btn-primary">Run</button> -->
+            </form>
+        <span id="status_{{ case.id() }}"></span>
+        </li><br/>
+	
+        {% endfor %}
+    
+    </ul>
+   </div>   
+
+{% endblock %}

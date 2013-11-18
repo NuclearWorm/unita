@@ -1,0 +1,14 @@
+{% extends "around.html" %}
+
+{% block menuleft %}
+    <div class="span2">
+    
+    <ul class="nav nav-list">
+      {% for env in envs %}
+	<li{% if request.path.split("/")[1] == env  %} class="active"{% endif %}>
+	    <a href="/{{env}}"><i class="icon-home"{% if request.path=="/%s"%env %} icon-white{% endif %}></i> {{env}}</a>
+	</li>
+      {% endfor %}
+    </ul>    
+    </div>
+{% endblock %}    

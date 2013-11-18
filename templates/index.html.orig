@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block body %}
+   <div class="container-fluid">
+   <div class="row-fluid">
+   <div class="span12">&nbsp;
+   <div class="span12">&nbsp;
+    </div>
+    </div>
+    <h3>please choose environment</h3>
+   <div class="span12">&nbsp;
+       </div>
+
+   {% block menu %}
+ <div class="tabbable tabs-left">
+   <ul class="nav nav-tabs">
+     {% for env in tests %}
+     
+     <li{% if loop.first %} class="active"{% endif %}><a href="#tab{{loop.index}}" data-toggle="tab"><i class="icon-globe"></i>&nbsp;Environment {{env}}</a></li>
+     {% endfor %}
+   </ul>
+   
+   
+   <div class="tab-content">
+     
+    {% for key in keys %}
+    <div class="tab-pane{% if loop.first %} active{% endif %}" id="tab{{loop.index}}">
+      <p>
+       <ul>{% for file in tests[key] %}
+	<li><lead>{{ file['desc'] }}</lead><br><code>{{ file['abs_path'] }}</code></li>
+           {% endfor %}
+       </ul>
+      </p>
+     </div>
+   {% endfor %}
+   </div>
+ 
+ </div>
+{% endblock %}
+    </div>
+    </div>
+{% endblock %}

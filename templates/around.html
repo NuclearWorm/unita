@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block body %}
+   <div class="container-fluid">
+   <div class="row-fluid">
+   <div class="span12">&nbsp;
+
+    </div>
+    {% block bigmsg %}<h3>please choose environment</h3>{% endblock %}
+    <div class="span6">&nbsp;
+    <ul class="breadcrumb">{% block path %}{% endblock %}</ul>
+    </div>
+   <div class="span12">&nbsp;
+       </div>
+
+   {% block menuleft %}{% endblock %}
+   {% block contentright %}{% endblock %}
+    </div>
+    </div>
+{% endblock %}

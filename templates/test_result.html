@@ -1,0 +1,71 @@
+{% set test_passed = res.wasSuccessful() %}
+<div class="accordion" id="accordion2">
+{% if test_passed %}
+<div class="alert alert-success">PASSED</div>
+{% else %}
+{% if not test_passed and res.failures %}
+{% set test_id = res.failures[0][0].id() %}
+<div class="accordion-group">
+    <div class="accordion-heading">
+        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseOne_{{test_id}}">
+            <div class="alert alert-error">FAILED</div>
+        </a>
+    </div>
+    <div id="collapseOne_{{test_id}}" class="accordion-body collapse in">
+        <div class="accordion-inner">
+            <pre>
+               {{res.failures[0][1]}}
+            </pre>
+        </div>
+    </div>
+</div>
+<div class="accordion-group">
+    <div class="accordion-heading">
+        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseTwo_{{test_id}}">
+            <div class="alert alert-info">DEBUG details</div>
+        </a>
+    </div>
+    <div id="collapseTwo_{{test_id}}" class="accordion-body collapse">
+        <div class="accordion-inner">
+
+            <pre style="height: auto;max-height: 600px;overflow: auto;word-wrap: normal;word-break: normal;white-space: pre;">
+                {{text}}
+            </pre>
+
+        </div>
+    </div>
+</div>
+{% endif %}
+{% if not test_passed and res.errors %}
+{% set test_id = res.errors[0][0].id() %}
+<div class="accordion-group">
+    <div class="accordion-heading">
+        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseOne_{{test_id}}">
+            <div class="alert">ERROR</div>
+        </a>
+    </div>
+    <div id="collapseOne_{{test_id}}" class="accordion-body collapse in">
+        <div class="accordion-inner">
+            <pre>
+                {{res.errors[0][1]}}
+            </pre>
+        </div>
+    </div>
+</div>
+<div class="accordion-group">
+    <div class="accordion-heading">
+        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseTwo_{{test_id}}">
+            <div class="alert alert-info">DEBUG details</div>
+        </a>
+    </div>
+    <div id="collapseTwo_{{test_id}}" class="accordion-body collapse">
+        <div class="accordion-inner">
+            <pre style="height: auto;max-height: 600px;overflow: auto;word-wrap: normal;word-break: normal;white-space: pre;">
+                {{text}}
+            </pre>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+</div>

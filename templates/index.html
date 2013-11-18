@@ -1,0 +1,24 @@
+{% extends "sidebar.html" %}
+{% block extrahead %}
+<script type="text/javascript">$('#result').load('try.html');</script>
+{% endblock %}
+
+  {% block contentright %}
+   <div class="span8">
+     
+    <div>
+       <ul class="inline">
+	{% for env in envs %}
+	<li><div class="well">
+	    <a href="/{{env}}">{{env}}</a>
+	</div></li>
+	{% endfor %}
+       </ul>
+     </div>
+
+   </div>   
+      
+  
+ <div id="result"></div>
+  {% endblock %}
+

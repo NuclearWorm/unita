@@ -1,0 +1,16 @@
+Flask==0.10.1
+Jinja2==2.7.1
+MarkupSafe==0.18
+Werkzeug==0.9.4
+distribute==0.6.24
+gateone==1.1
+gevent==0.13.8
+greenlet==0.4.1
+itsdangerous==0.23
+matplotlib==1.1.1rc
+networkx==1.6
+pygraphviz==1.1
+pymssql==1.0.2
+screenlets==0.1.6
+screenlets-pack-basic==0.1.6
+wsgiref==0.1.2

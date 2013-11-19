@@ -49,6 +49,23 @@ desc_re = re.compile(r'WEBtest_description="([^"]+)"')
 ###                                               -tests
 
 
+"""
+How about this:
+conf = {
+    "env1": {"dir": "/home/serg/testenv1/internal_path_to_tests/",
+             "files": "",
+             "only_files" : "",
+             "ignore_files": "",
+             "recursion": False,
+             }
+    "env2": {"dir": "/home/serg/testenv2",
+             "files": "",
+             "only_files" : "",
+             "ignore_files": "",
+             "recursion": True,
+             }
+"""
+
 # Environments with test files, each env should fit some directory with tests
 # TODO: do it configurable from web interface
 DIRS = [

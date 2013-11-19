@@ -5,20 +5,20 @@ import os
 import re
 import sys
 import time
-import unittest
+# Let's add 2.6 support
+try:
+    import unittest2 as unittest
+    print "Importing unittest2 from the future"
+except:
+    import unittest
+    print "Importing unittest as usual"
+
 import logging
 import copy
 from gevent import monkey; monkey.patch_all()
 from gevent.pywsgi import WSGIServer
 from werkzeug.debug import DebuggedApplication
 from werkzeug.serving import run_with_reloader
-
-# Let's add 2.6 support
-if sys.version_info[1] > 6:
-   discovery_supported = True
-else:
-   discovery_supported = False
-   import discover
    
 DEBUG = True
 #DEBUG = False
@@ -143,24 +143,20 @@ def load_cases(file):
    execfile(activate_this, dict(__file__=activate_this))
    lg("Executed: ", activate_this)
    lg("Now new sys.path", sys.path)
-   
-   if discovery_supported:
-      tl=unittest.TestLoader()
-      lg("TestLoader", tl)
-      ts = tl.discover(os.path.dirname(file), pattern=os.path.basename(file), top_level_dir=os.path.dirname(file))
-   else:
-      tl = discover.DiscoveringTestLoader()
-      ts = tl.discover(os.path.dirname(file), pattern=os.path.basename(file), top_level_dir=os.path.dirname(file))
+   tl=unittest.TestLoader()
+   lg("TestLoader", tl)
+   ts = tl.discover(os.path.dirname(file), pattern=os.path.basename(file), top_level_dir=os.path.dirname(file))
    lg("Test cases object", ts)
-   #print ts 
-   #print ts._tests[0]
-   #print ts._tests[0]._tests[0]
-   ulist = ts._tests[0]._tests[0]._tests
-   print "Deleting ", module_name
+   # TODO: support Suite names and display them in web
+   ulist = []
+   for i in xrange(len(ts._tests[0]._tests)):
+      ulist += ts._tests[0]._tests[i]._tests
+   lg("Test cases", ulist)
+   lg("Deleting ", module_name)
    del sys.modules[module_name]
-   print "Deactivating ..."
+   lg("Deactivating virtual env...")
    sys.path = [i for i in sys.path if home_env not in i]
-   print "Deactivated sys.path", sys.path
+   lg("Deactivated sys.path", sys.path)
    return ulist
 
 # Run one test
@@ -173,16 +169,13 @@ def run_real_test(env, test):
    # Activating virtualenv
    execfile(activate_this, dict(__file__=activate_this))
    print "Fulle_path", full_path
-   
-   if discovery_supported:
-      tl=unittest.TestLoader()
-      lg("TestLoader", tl)
-      ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
-   else:
-      tl = discover.DiscoveringTestLoader()
-      ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
 
-   ulist = ts._tests[0]._tests[0]._tests
+   tl=unittest.TestLoader()
+   lg("TestLoader", tl)
+   ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
+   ulist = []
+   for i in xrange(len(ts._tests[0]._tests)):
+      ulist += ts._tests[0]._tests[i]._tests
    test4run = [test_ for test_ in ulist if test_.id() == test][0]
    print "Test for running choosen:", test4run
    #result = test4run.run()
@@ -236,15 +229,13 @@ def run_real_test_suite(env, tests):
    execfile(activate_this, dict(__file__=activate_this))
    print "Fulle_path", full_path
    
-   if discovery_supported:
-      tl=unittest.TestLoader()
-      lg("TestLoader", tl)
-      ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
-   else:
-      tl = discover.DiscoveringTestLoader()
-      ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
-   
-   ulist = ts._tests[0]._tests[0]._tests
+   tl=unittest.TestLoader()
+   lg("TestLoader", tl)
+   ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
+   ulist = []
+   for i in xrange(len(ts._tests[0]._tests)):
+      ulist += ts._tests[0]._tests[i]._tests
+   #ulist = ts._tests[0]._tests[0]._tests
    tests4run = [test_ for test_ in ulist if test_.id() in tests]
    print "Test for running choosen:", tests4run
    print "Empty(?) Running:", RUNNING

@@ -13,4 +13,5 @@ pygraphviz==1.1
 pymssql==1.0.2
 screenlets==0.1.6
 screenlets-pack-basic==0.1.6
+unittest2==0.5.1
 wsgiref==0.1.2

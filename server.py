@@ -6,15 +6,22 @@ import re
 import sys
 import time
 import unittest
+import logging
 import copy
 from gevent import monkey; monkey.patch_all()
 from gevent.pywsgi import WSGIServer
 from werkzeug.debug import DebuggedApplication
 from werkzeug.serving import run_with_reloader
 
-
-#DEBUG = True
-DEBUG = False
+# Let's add 2.6 support
+if sys.version_info[1] > 6:
+   discovery_supported = True
+else:
+   discovery_supported = False
+   import discover
+   
+DEBUG = True
+#DEBUG = False
 # Initial value of trigger to stop executing tests
 STOP_IT = False
 # Directory for temporary files
@@ -25,13 +32,30 @@ TMP_DIR = "/tmp/"
 # TODO: add required description to Howto and Readme
 desc_re = re.compile(r'WEBtest_description="([^"]+)"')
 
+#      The map how the test are organized
+###
+### -/home
+###       -user
+###            -virtual_env                  # with all needed packages
+###                        -bin/activate.py
+###            -testenv1
+###                     -some_internal_path_to_dir
+###                                               -tests
+###            -testenv2
+###                     -some_internal_path_to_dir
+###                                               -tests
+###            -testenv3
+###                     -some_internal_path_to_dir
+###                                               -tests
+
+
 # Environments with test files, each env should fit some directory with tests
 # TODO: do it configurable from web interface
 DIRS = [
    'testenv1',
    'testenv2',
-   'testenv3',
-   'testenv4',
+   #'testenv3',
+   #'testenv4',
 ]
 # Directory of virtualenv where all packages are located
 # TODO: make it optional, not everyone uses virtualenv
@@ -46,16 +70,37 @@ SUITE_RESULT = dict([(env, {'running': False, 'finished': False, }) for env in D
 HOME = os.environ['HOME'] # yeah, I'm joking
 # "/home/he/virt2/tplant/qadir"
 # Internal path within the environment
-hashlama = lambda x: os.path.join(HOME, x, "tplant", "qadir")
+# TODO: make it configurable
+hashlama = lambda x: os.path.join(os.environ['HOME'], x, "internal_path_to_tests")
 ENVS = map(hashlama, DIRS)
+# /home/user/testenv1/internal_path_to_tests
+
 # TODO: make all these paths simpler, simpler, SIMPLERRRR!
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+                    datefmt='%d/%b/%Y %H:%M:%S',
+                    #filename='logfile.log',
+                    #filemode='a',
+                    #maxBytes=50000,
+                    #backupCount=2,
+                    )
+log = logging.getLogger(__name__)
+if log.name == "__main__":
+   def lg(*x): print (", ".join([str(i) for i in x]))
+   def li(*x): print (", ".join([str(i) for i in x]))
+else:
+   lg = lambda *x: log.debug(", ".join([str(i) for i in x]))
+   li = lambda *x: log.info(", ".join([str(i) for i in x]))
+
 
 # Regexps for finding files with tests, let's search only *.py
-test_regex = re.compile(r"\w+\.py")
+test_regex = re.compile(r"\w+\.py$")
 
 app = Flask(__name__)
 
 # Debug log - is log file where any debug info during the test could be saved
+# This function clears it
+# TODO: do something with this :(
 def empty_debuglog():
    with open(os.path.join(os.getcwd(), "debuglog"), "w") as dblog:
       dblog.write("")
@@ -71,7 +116,9 @@ def json_fix(x):
 # Let's search files
 def find_tests_in_env(env):
    full_path = hashlama(env)
+   lg("Full path:", full_path)
    files = [f for f in os.listdir(full_path) if test_regex.match(f) and "template_test" not in f]
+   lg("Files:", ",".join(files))
    d_files = []
    for file in files:
       d_file = {}
@@ -85,19 +132,26 @@ def find_tests_in_env(env):
 # Let's load all the cases from the file
 def load_cases(file):
    home_env = "/".join(os.path.dirname(file).split("/")[:-2])
-   print "Load cases from", file
-   print "Paths", os.path.dirname(file), os.path.basename(file)
-   print "Previous sys.path", sys.path
+   li("Load cases from", file)
+   #print "Paths", os.path.dirname(file), os.path.basename(file)
+   lg("Previous sys.path", sys.path)
    # old_sys_path = sys.path[:]
-   print "Executing virtualenv for", file
+   lg("Executing virtualenv for", file)
    module_name = os.path.basename(file).split(".")[0]
    #activate_this = home_env + '/bin/activate_this.py'
    activate_this = VIRT_ENV + '/bin/activate_this.py'
    execfile(activate_this, dict(__file__=activate_this))
-   print "Executed: ", activate_this
-   print "Now new sys.path", sys.path
-   tl=unittest.TestLoader()
-   ts = tl.discover(os.path.dirname(file), pattern=os.path.basename(file), top_level_dir=os.path.dirname(file))
+   lg("Executed: ", activate_this)
+   lg("Now new sys.path", sys.path)
+   
+   if discovery_supported:
+      tl=unittest.TestLoader()
+      lg("TestLoader", tl)
+      ts = tl.discover(os.path.dirname(file), pattern=os.path.basename(file), top_level_dir=os.path.dirname(file))
+   else:
+      tl = discover.DiscoveringTestLoader()
+      ts = tl.discover(os.path.dirname(file), pattern=os.path.basename(file), top_level_dir=os.path.dirname(file))
+   lg("Test cases object", ts)
    #print ts 
    #print ts._tests[0]
    #print ts._tests[0]._tests[0]
@@ -119,8 +173,15 @@ def run_real_test(env, test):
    # Activating virtualenv
    execfile(activate_this, dict(__file__=activate_this))
    print "Fulle_path", full_path
-   tl=unittest.TestLoader()
-   ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
+   
+   if discovery_supported:
+      tl=unittest.TestLoader()
+      lg("TestLoader", tl)
+      ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
+   else:
+      tl = discover.DiscoveringTestLoader()
+      ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
+
    ulist = ts._tests[0]._tests[0]._tests
    test4run = [test_ for test_ in ulist if test_.id() == test][0]
    print "Test for running choosen:", test4run
@@ -144,8 +205,12 @@ def run_real_test(env, test):
    
    # Do we need debug log?
    print "Debuglog?", os.path.join(os.getcwd(), "debuglog")
-   with open(os.path.join(os.getcwd(), "debuglog")) as dblog:
-      text = dblog.read()
+   try:
+      with open(os.path.join(os.getcwd(), "debuglog")) as dblog:
+         text = dblog.read()
+   except Exception as e:
+      lg("Exception when trying open file", os.path.join(os.getcwd(), "debuglog"), str(e))
+      text = ''
    
    # De-activating virtualenv
    del sys.modules[file_name]
@@ -170,8 +235,15 @@ def run_real_test_suite(env, tests):
    # Activating virtualenv
    execfile(activate_this, dict(__file__=activate_this))
    print "Fulle_path", full_path
-   tl=unittest.TestLoader()
-   ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
+   
+   if discovery_supported:
+      tl=unittest.TestLoader()
+      lg("TestLoader", tl)
+      ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
+   else:
+      tl = discover.DiscoveringTestLoader()
+      ts = tl.discover(os.path.dirname(full_path), pattern=os.path.basename(full_path), top_level_dir=os.path.dirname(full_path))
+   
    ulist = ts._tests[0]._tests[0]._tests
    tests4run = [test_ for test_ in ulist if test_.id() in tests]
    print "Test for running choosen:", tests4run
@@ -358,7 +430,7 @@ def tests_from(env=None, tfile=None):
 
 @app.route("/")  
 def index():
-   print "main - /", request
+   lg("Main - /", request)
    tests = {}
    for k, env in enumerate(DIRS):
       test_files = find_tests_in_env(env)
